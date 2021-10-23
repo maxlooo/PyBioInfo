@@ -1,0 +1,9 @@
+
+
+cd "C:\Users\Max\src\biofxpy\Mastering Python for Bioinformatics\01_dna"
+
+./dna.py "/mnt/c/Users/Max/src/biofxpy/Mastering Python for Bioinformatics/01_dna/tests/inputs/input1.txt"
+
+
+
+
