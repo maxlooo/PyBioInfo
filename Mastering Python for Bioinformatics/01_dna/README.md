@@ -48,6 +48,3 @@ Success: no issues found in 2 source files
 ======================= 8 passed, 1 skipped in 0.87s ========================
 ```
 
-## Author
-
-Ken Youens-Clark <kyclark@gmail.com>
