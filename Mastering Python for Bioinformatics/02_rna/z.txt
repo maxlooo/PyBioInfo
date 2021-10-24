@@ -1,0 +1,10 @@
+
+
+
+
+
+cd "C:\Users\Max\src\biofxpy\Mastering Python for Bioinformatics\02_rna"
+
+cd "/mnt/c/Users/Max/src/biofxpy/Mastering Python for Bioinformatics/02_rna"
+
+
