@@ -8,3 +8,4 @@ cd "C:\Users\Max\src\biofxpy\Mastering Python for Bioinformatics\02_rna"
 cd "/mnt/c/Users/Max/src/biofxpy/Mastering Python for Bioinformatics/02_rna"
 
 
+for py in ./solution*; do echo $py && time $py ./tests/inputs/input3.txt; done
