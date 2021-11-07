@@ -25,26 +25,9 @@ $ ./dna.py AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTGTGTGGATTAAAAAAAGAGTGTCTGATAGCAG
 20 12 17 21
 ```
 
-The `make test` target will run the complete test suite:
+To test:
 
 ```
-$ make test
-python3 -m pytest -xv --flake8 --pylint --mypy dna.py tests/dna_test.py
-============================ test session starts ============================
-...
-
-dna.py::FLAKE8 PASSED                                                 [ 11%]
-dna.py::mypy PASSED                                                   [ 22%]
-tests/dna_test.py::FLAKE8 SKIPPED                                     [ 33%]
-tests/dna_test.py::mypy PASSED                                        [ 44%]
-tests/dna_test.py::test_exists PASSED                                 [ 55%]
-tests/dna_test.py::test_usage PASSED                                  [ 66%]
-tests/dna_test.py::test_arg PASSED                                    [ 77%]
-tests/dna_test.py::test_file PASSED                                   [ 88%]
-::mypy PASSED                                                         [100%]
-=================================== mypy ====================================
-
-Success: no issues found in 2 source files
-======================= 8 passed, 1 skipped in 0.87s ========================
+pytest -xv
 ```
 
