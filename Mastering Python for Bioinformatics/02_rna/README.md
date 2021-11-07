@@ -48,29 +48,9 @@ UUAGCCCAGACUAGGACUUU
 CUUAGGUCAGUGGUCUCUAA
 ```
 
-A fully passing test suite looks like the following:
+To test:
 
 ```
-$ make test
-python3 -m pytest -xv --flake8 --pylint --mypy rna.py tests/rna_test.py
-============================ test session starts ============================
-...
-
-rna.py::FLAKE8 SKIPPED                                                [  8%]
-rna.py::mypy PASSED                                                   [ 16%]
-tests/rna_test.py::FLAKE8 SKIPPED                                     [ 25%]
-tests/rna_test.py::mypy PASSED                                        [ 33%]
-tests/rna_test.py::test_exists PASSED                                 [ 41%]
-tests/rna_test.py::test_usage PASSED                                  [ 50%]
-tests/rna_test.py::test_no_args PASSED                                [ 58%]
-tests/rna_test.py::test_bad_file PASSED                               [ 66%]
-tests/rna_test.py::test_good_input1 PASSED                            [ 75%]
-tests/rna_test.py::test_good_input2 PASSED                            [ 83%]
-tests/rna_test.py::test_good_multiple_inputs PASSED                   [ 91%]
-::mypy PASSED                                                         [100%]
-=================================== mypy ====================================
-
-Success: no issues found in 2 source files
-======================= 10 passed, 2 skipped in 0.46s =======================
+pytest -xv
 ```
 
