@@ -1,0 +1,8 @@
+
+
+
+cd "C:\Users\Max\src\biofxpy\Mastering Python for Bioinformatics\04_fib"
+cp solution1_list_function.py fib.py
+
+
+
