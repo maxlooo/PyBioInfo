@@ -1,8 +1,18 @@
 
 
 
-cd "C:\Users\Max\src\biofxpy\Mastering Python for Bioinformatics\04_fib"
+cd "C:\Users\Max\src\biofxpy\PyBioInfo\Mastering Python for Bioinformatics\04_fib"
 cp solution1_list_function.py fib.py
+
+for py in ./solution1_list.py ./solution2_generator_islice.py ./solution3_recursion_lru_cache.py; do echo $py && time $py 40 5; done
+
+
+https://www.linode.com/docs/guides/installing-and-using-hyperfine-on-linux/
+sudo apt update && sudo apt upgrade
+
+
+
+
 
 
 
