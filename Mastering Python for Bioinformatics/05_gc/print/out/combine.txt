@@ -1,0 +1,636 @@
+bench.sh
+#!/usr/bin/env bash
+# Benchmark all the solutions
+PRGS=$(find . -name solution\* | sort | xargs echo | sed "s/ /,/g")
+hyperfine -i --warmup 1 -L prg $PRGS '{prg} seqs.fa'
+--------------------------------
+--------------------------------
+clearBlankLinesFromAllFiles.py
+#!/usr/bin/env python3
+import os
+outpath = os.path.join(os.getcwd(), "out/combine.txt")
+print(outpath)
+outdir = os.path.dirname(outpath)
+if not os.path.exists(outdir):
+  os.makedirs(outdir)
+outfile = open(outpath, 'a')
+for filename in os.listdir(os.getcwd()):
+  inpath = os.path.join(os.getcwd(), filename)
+  print(inpath)
+  if os.path.isfile(inpath):
+    with open(inpath, 'r') as infile:
+      outfile.write(f'{filename}\n')
+      for line in infile:
+        if line.rstrip():
+          outfile.write(line)
+      outfile.write("-"*32 + "\n")
+      outfile.write("-"*32 + "\n")
+--------------------------------
+--------------------------------
+gc.orig
+#!/usr/bin/env python3
+"""
+Purpose: Calculate GC content
+Author : Ken Youens-Clark <kyclark@gmail.com>
+"""
+import argparse
+import re
+from Bio import SeqIO
+# --------------------------------------------------
+def get_args():
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Calculate GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        help='Input sequence file')
+    return parser.parse_args()
+# --------------------------------------------------
+def main():
+    """ Make a jazz noise here """
+    args = get_args()
+    high = (0, '')
+    # high = sorted([gc(seq) for seq in SeqIO.parse(args.file, 'fasta')])[-1]
+    high = sorted(map(gc, SeqIO.parse(args.file, 'fasta')))[-1]
+    print(f'{high[1]} {high[0]:0.06f}')
+# --------------------------------------------------
+def gc(rec):
+    """ Return the GC content, record ID for a sequence """
+    seq = str(rec.seq)
+    gc = re.findall('[gc]', seq, re.IGNORECASE)
+    return ((len(gc) / len(seq)) * 100, rec.id)
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+genseq.py
+#!/usr/bin/env python3
+""" Generate long sequence """
+import argparse
+import numpy as np
+import random
+from typing import NamedTuple, TextIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    seq_len: int
+    num_seqs: int
+    sigma: float
+    out_file: TextIO
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Generate long sequence',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-l',
+                        '--len',
+                        help='Average sequence length',
+                        metavar='int',
+                        type=int,
+                        default=500)
+    parser.add_argument('-n',
+                        '--num',
+                        help='Number of sequences',
+                        metavar='int',
+                        type=int,
+                        default=1000)
+    parser.add_argument('-s',
+                        '--sigma',
+                        help='Sigma/STD',
+                        metavar='sigma',
+                        type=float,
+                        default=0.1)
+    parser.add_argument('-o',
+                        '--outfile',
+                        help='Output file',
+                        metavar='FILE',
+                        type=argparse.FileType('wt'),
+                        default='seqs.fa')
+    args = parser.parse_args()
+    return Args(args.len, args.num, args.sigma, args.outfile)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    for i in range(args.num_seqs):
+        seq_len = int(np.random.normal(args.seq_len, args.sigma))
+        seq = ''.join([random.choice('ACGT') for _ in range(seq_len)])
+        args.out_file.write(f'>SEQ{i}\n{seq}\n')
+    print(f'Wrote {args.num_seqs:,} sequences of avg length {args.seq_len:,} '
+          f'to "{args.out_file.name}".')
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+Makefile
+.PHONY: test
+test:
+	python3 -m pytest -xv cgc.py tests/cgc_test.py
+#	python3 -m pytest -xv --disable-pytest-warnings --flake8 --pylint --pylint-rcfile=../pylintrc --mypy cgc.py tests/cgc_test.py
+all:
+	../bin/all_test.py cgc.py
+seqs.fa:
+	./genseq.py -n 1000
+bench: seqs.fa
+	./bench.sh
+--------------------------------
+--------------------------------
+README.md
+# Finding GC Content in Sequences
+http://rosalind.info/problems/gc/
+Write a Python program called `cgc.py` that takes a single positional argument which should be a readable text file.
+The program should print a "usage" statement for `-h` or `--help` flags:
+```
+$ ./cgc.py -h
+usage: cgc.py [-h] FILE
+Compute GC content
+positional arguments:
+  FILE        Input sequence file
+optional arguments:
+  -h, --help  show this help message and exit
+```
+The input file will be in FASTA format:
+```
+$ cat tests/inputs/1.fa
+>Rosalind_6404
+CCTGCGGAAGATCGGCACTAGAATAGCCAGAACCGTTTCTCTGAGGCTTCCGGCCTTCCC
+TCCCACTAATAATTCTGAGG
+>Rosalind_5959
+CCATCGGTAGCGCATCCTTAGTCCAATTAAGTCCCTATCCAGGCGCTCCGCCGAAGGTCT
+ATATCCATTTGTCAGCAGACACGC
+>Rosalind_0808
+CCACCCTCGTGGTATGGCTAGGCATTCAGGAACCGGAGAACGCTTCAGACCAGCCCGGAC
+TGGGAACCTGCGGGCAGTAGGTGGAAT
+```
+The output should be the sequence ID with the highest GC content along with that GC content as a floating-point value to 6 significant digits:
+```
+$ ./cgc.py tests/inputs/1.fa
+Rosalind_0808 60.919540
+```
+To test:
+```
+pytest -xv
+```
+--------------------------------
+--------------------------------
+solution1_list.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO, List, Tuple
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    seqs: List[Tuple[float, str]] = []
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        # Iterate each base and compare to G or C, add 1 to counter
+        gc = 0
+        for base in rec.seq.upper():
+            if base in ('C', 'G'):
+                gc += 1
+        pct = (gc * 100) / len(rec.seq)
+        seqs.append((pct, rec.id))
+    high = max(seqs)
+    print(f'{high[1]} {high[0]:0.6f}')
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution2_unit.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO, List
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    seqs: List[MySeq] = []
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        seqs.append(MySeq(find_gc(rec.seq), rec.id))
+    high = max(seqs)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    if not seq:
+        return 0
+    gc = 0
+    for base in seq.upper():
+        if base in ('C', 'G'):
+            gc += 1
+    return (gc * 100) / len(seq)
+# --------------------------------------------------
+def test_find_gc() -> None:
+    """ Test find_gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution3_max_var.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main():
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        pct = find_gc(rec.seq)
+        if pct > high.gc:
+            high = MySeq(pct, rec.id)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    return (seq.upper().count('C') +
+            seq.upper().count('G')) * 100 / len(seq) if seq else 0
+# --------------------------------------------------
+def test_find_gc():
+    """ Test gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution4_list_comp.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        pct = find_gc(rec.seq)
+        if pct > high.gc:
+            high = MySeq(pct, rec.id)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    if not seq:
+        return 0
+    gc = len([base for base in seq.upper() if base in 'CG'])
+    return (gc * 100) / len(seq)
+# --------------------------------------------------
+def test_find_gc():
+    """ Test find_gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution5_filter.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        pct = find_gc(rec.seq)
+        if pct > high.gc:
+            high = MySeq(pct, rec.id)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    if not seq:
+        return 0
+    gc = len(list(filter(lambda base: base in 'CG', seq.upper())))
+    return (gc * 100) / len(seq)
+# --------------------------------------------------
+def test_find_gc():
+    """ Test find_gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution6_map.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        pct = find_gc(rec.seq)
+        if pct > high.gc:
+            high = MySeq(pct, rec.id)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    if not seq:
+        return 0
+    gc = sum(map(lambda base: base in 'CG', seq.upper()))
+    return (gc * 100) / len(seq)
+# --------------------------------------------------
+def test_find_gc():
+    """ Test find_gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution7_re.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import re
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for rec in SeqIO.parse(args.file, 'fasta'):
+        pct = find_gc(str(rec.seq))
+        if pct > high.gc:
+            high = MySeq(pct, rec.id)
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(seq: str) -> float:
+    """ Calculate GC content """
+    return len(re.findall('[GC]', seq.upper()) * 100) / len(seq) if seq else 0
+# --------------------------------------------------
+def test_find_gc():
+    """ Test find_gc """
+    assert find_gc('') == 0.
+    assert find_gc('C') == 100.
+    assert find_gc('G') == 100.
+    assert find_gc('CGCCG') == 100.
+    assert find_gc('ATTAA') == 0.
+    assert find_gc('ACGT') == 50.
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
+solution8_list_comp_map.py
+#!/usr/bin/env python3
+""" Compute GC content """
+import argparse
+import re
+import sys
+from typing import NamedTuple, TextIO
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+class Args(NamedTuple):
+    """ Command-line arguments """
+    file: TextIO
+class MySeq(NamedTuple):
+    """ Sequence """
+    gc: float
+    name: str
+# --------------------------------------------------
+def get_args() -> Args:
+    """ Get command-line arguments """
+    parser = argparse.ArgumentParser(
+        description='Compute GC content',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('file',
+                        metavar='FILE',
+                        type=argparse.FileType('rt'),
+                        nargs='?',
+                        default=sys.stdin,
+                        help='Input sequence file')
+    args = parser.parse_args()
+    return Args(args.file)
+# --------------------------------------------------
+def main() -> None:
+    """ Make a jazz noise here """
+    args = get_args()
+    high = MySeq(0., '')
+    for seq in map(find_gc, SeqIO.parse(args.file, 'fasta')):
+        if seq.gc > high.gc:
+            high = seq
+    print(f'{high.name} {high.gc:0.6f}')
+# --------------------------------------------------
+def find_gc(rec: SeqRecord) -> MySeq:
+    """ Return the GC content, record ID for a sequence """
+    pct = 0.
+    if seq := str(rec.seq):
+        gc = len(re.findall('[GC]', seq.upper()))
+        pct = (gc * 100) / len(seq)
+    return MySeq(pct, rec.id)
+# --------------------------------------------------
+def test_find_gc() -> None:
+    """ Test find_gc """
+    assert find_gc(SeqRecord(Seq(''), id='123')) == (0.0, '123')
+    assert find_gc(SeqRecord(Seq('C'), id='ABC')) == (100.0, 'ABC')
+    assert find_gc(SeqRecord(Seq('G'), id='XYZ')) == (100.0, 'XYZ')
+    assert find_gc(SeqRecord(Seq('ACTG'), id='ABC')) == (50.0, 'ABC')
+    assert find_gc(SeqRecord(Seq('GGCC'), id='XYZ')) == (100.0, 'XYZ')
+# --------------------------------------------------
+if __name__ == '__main__':
+    main()
+--------------------------------
+--------------------------------
