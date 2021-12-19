@@ -2,7 +2,7 @@
 
 cd "C:\Users\Max\src\biofxpy\PyBioInfo\Mastering Python for Bioinformatics\05_gc"
 
-
+./cgc.py tests/inputs/1.fa
 
 
 
